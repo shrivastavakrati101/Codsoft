@@ -1,136 +1,111 @@
-# Codsoft// AlarmClockApp.kt
-import android.os.Bundle
-import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
+# Codsoft
 
-class AlarmClockApp : AppCompatActivity() {
-    private lateinit var viewModel: AlarmClockViewModel
+import tkinter as tk
+from tkinter import messagebox
+import datetime
+import time
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_alarm_clock)
+class AlarmClockApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Alarm Clock App")
+        self.root.geometry("300x250")
 
-        viewModel = ViewModelProvider(this).get(AlarmClockViewModel::class.java)
+        # Create frames
+        self.header_frame = tk.Frame(self.root, bg="#f0f0f0")
+        self.header_frame.pack(fill="x")
 
-        // Initialize UI components
-        val alarmList = findViewById<RecyclerView>(R.id.alarm_list)
-        val addButton = findViewById<Button>(R.id.add_button)
-        val settingsButton = findViewById<Button>(R.id.settings_button)
+        self.content_frame = tk.Frame(self.root, bg="#f0f0f0")
+        self.content_frame.pack(fill="both", expand=True)
 
-        // Set up alarm list adapter
-        val adapter = AlarmListAdapter(viewModel.alarmList)
-        alarmList.adapter = adapter
+        # Create header widgets
+        self.time_label = tk.Label(self.header_frame, text="", font=("Helvetica", 24), bg="#f0f0f0")
+        self.time_label.pack(side="left", padx=10)
 
-        // Set up add button click listener
-        addButton.setOnClickListener {
-            // Create a new alarm and add it to the list
-            val newAlarm = Alarm("New Alarm", 8, 0, 0)
-            viewModel.addAlarm(newAlarm)
-            adapter.notifyDataSetChanged()
-        }
+        self.alarm_button = tk.Button(self.header_frame, text="Set New Alarm", command=self.set_alarm)
+        self.alarm_button.pack(side="right", padx=10)
 
-        // Set up settings button click listener
-        settingsButton.setOnClickListener {
-            // Navigate to settings screen
-            val intent = Intent(this, SettingsActivity::class.java)
-            startActivity(intent)
-        }
-    }
-}
+        # Create content widgets
+        self.alarm_listbox = tk.Listbox(self.content_frame, width=30, height=10)
+        self.alarm_listbox.pack(fill="both", expand=True)
 
-// AlarmClockViewModel.kt
-import android.app.AlarmManager
-import android.content.Context
-import androidx.lifecycle.ViewModel
+        self.snooze_button = tk.Button(self.content_frame, text="Snooze", command=self.snooze_alarm)
+        self.snooze_button.pack(fill="x")
 
-class AlarmClockViewModel(private val context: Context) : ViewModel() {
-    private val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-    val alarmList = mutableListOf<Alarm>()
+        self.dismiss_button = tk.Button(self.content_frame, text="Dismiss", command=self.dismiss_alarm)
+        self.dismiss_button.pack(fill="x")
 
-    fun addAlarm(alarm: Alarm) {
-        alarmList.add(alarm)
-        // Set alarm using AlarmManager
-        val intent = Intent(context, AlarmReceiver::class.java)
-        val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, 0)
-        alarmManager.set(AlarmManager.RTC_WAKEUP, alarm.time, pendingIntent)
-    }
+        # Initialize alarm clock
+        self.alarm_clock = AlarmClock()
+        self.update_time()
 
-    fun snoozeAlarm(alarm: Alarm) {
-        // Snooze alarm for 10 minutes
-        val newTime = alarm.time + 10 * 60 * 1000
-        alarmManager.set(AlarmManager.RTC_WAKEUP, newTime, pendingIntent)
-    }
+    def update_time(self):
+        current_time = datetime.datetime.now().strftime("%H:%M:%S")
+        self.time_label.config(text=current_time)
+        self.root.after(1000, self.update_time)
 
-    fun dismissAlarm(alarm: Alarm) {
-        // Cancel alarm
-        alarmManager.cancel(pendingIntent)
-    }
-}
+    def set_alarm(self):
+        alarm_time = self.get_alarm_time()
+        if alarm_time:
+            self.alarm_clock.set_alarm(alarm_time)
+            self.alarm_listbox.insert(tk.END, alarm_time.strftime("%H:%M:%S"))
 
-// Alarm.kt
-data class Alarm(val name: String, val hour: Int, val minute: Int, val second: Int) {
-    val time: Long
-        get() = hour * 60 * 60 * 1000 + minute * 60 * 1000 + second * 1000
-}
+    def get_alarm_time(self):
+        alarm_time_window = tk.Toplevel(self.root)
+        alarm_time_window.title("Set Alarm Time")
 
-// AlarmReceiver.kt
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
+        hour_label = tk.Label(alarm_time_window, text="Hour:")
+        hour_label.pack()
+        hour_entry = tk.Entry(alarm_time_window, width=5)
+        hour_entry.pack()
 
-class AlarmReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        // Play alarm sound and show notification
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notification = NotificationCompat.Builder(context, "alarm_channel")
-            .setContentTitle("Alarm")
-            .setContentText("Wake up!")
-            .setSmallIcon(R.drawable.ic_alarm)
-            .build()
-        notificationManager.notify(1, notification)
-    }
-}
+        minute_label = tk.Label(alarm_time_window, text="Minute:")
+        minute_label.pack()
+        minute_entry = tk.Entry(alarm_time_window, width=5)
+        minute_entry.pack()
 
-// activity_alarm_clock.xml
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical">
+        def set_alarm_time():
+            hour = int(hour_entry.get())
+            minute = int(minute_entry.get())
+            alarm_time = datetime.datetime.now().replace(hour=hour, minute=minute, second=0)
+            alarm_time_window.destroy()
+            return alarm_time
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/alarm_list"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content" />
+        set_button = tk.Button(alarm_time_window, text="Set", command=set_alarm_time)
+        set_button.pack()
 
-    <Button
-        android:id="@+id/add_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Add Alarm" />
+        alarm_time_window.wait_window(alarm_time_window)
 
-    <Button
-        android:id="@+id/settings_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Settings" />
+    def snooze_alarm(self):
+        selected_alarm = self.alarm_listbox.curselection()
+        if selected_alarm:
+            alarm_time = self.alarm_clock.snooze_alarm(selected_alarm[0])
+            self.alarm_listbox.delete(selected_alarm[0])
+            self.alarm_listbox.insert(tk.END, alarm_time.strftime("%H:%M:%S"))
 
-</LinearLayout>
+    def dismiss_alarm(self):
+        selected_alarm = self.alarm_listbox.curselection()
+        if selected_alarm:
+            self.alarm_clock.dismiss_alarm(selected_alarm[0])
+            self.alarm_listbox.delete(selected_alarm[0])
 
-// AlarmListAdapter.kt
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import androidx.recyclerview.widget.RecyclerView
+class AlarmClock:
+    def __init__(self):
+        self.alarms = []
 
-class AlarmListAdapter(private val alarmList: List<Alarm>) : RecyclerView.Adapter<AlarmListAdapter.ViewHolder>() {
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_alarm, parent, false)
-        return ViewHolder(view)
-    }
+    def set_alarm(self, alarm_time):
+        self.alarms.append(alarm_time)
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val alarm = alarmList[position]
-        holder.nameTextView.text = alarm.name
-        holder.timeTextView.text = "${
+    def snooze_alarm(self, index):
+        alarm_time = self.alarms[index]
+        snooze_time = datetime.timedelta(minutes=5)
+        alarm_time += snooze_time
+        return alarm_time
+
+    def dismiss_alarm(self, index):
+        del self.alarms[index]
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = AlarmClockApp(root)
+    root.mainloop()
